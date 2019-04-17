@@ -21,7 +21,6 @@ class simulationParameters():
 
 
 # Initializing variables
-start = time.time()
 params = simulationParameters()
 tag_count = params.MIN_TAGS
 
@@ -52,6 +51,9 @@ while tag_count <= params.MAX_TAGS:
 
         # Query Tree algorithm
         while Q:
+            # Algorithm start time
+            start = time.time()
+
             # Current query will be the top of the stack of queries
             current_query = Q.pop()
 
@@ -95,11 +97,10 @@ while tag_count <= params.MAX_TAGS:
             https://thispointer.com/python-pandas-how-to-add-rows-in-a-dataframe-using-dataframe-append-loc-iloc/
 
         '''
+
+        end = time.time()
+        # Calculate QT execution time in seconds
+        execution = end - start
     
     tags = []
     tag_count += params.STEP
-
-
-end = time.time()
-
-execution = end - start
