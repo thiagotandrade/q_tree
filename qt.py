@@ -36,6 +36,11 @@ while tag_count <= params.MAX_TAGS:
                 Ver como singularizar a tag;
                 Ver pra que serve a memória M;
                 Ver como armazenar os dados de cada simulação; 
+                Achar indices das tags que contem o prefixo (Lembrar de inicializar indices): 
+                    indices = [i for i, tag in enumerate(my_list) if tag.startswith(current_query)]
+                Se houver colisão, fazer:
+                    Q.append(current_query + '0')
+                    Q.append(current_query + '1')
             '''
 
 
