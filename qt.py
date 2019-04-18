@@ -96,19 +96,18 @@ def QTsc(tags):
         # Empty            
         else: 
             empty += 1
-            if current_query != ' ':
-              if current_query == last_collision:
-                # Skip prefix (current_query + '1')
-                if current_query[:-1] == '0':  
-                  Qsc.pop()
-                  Qsc.extend([current_query[-1:] + '10', current_query[-1:] + '11'])
-                # Skip prefix (current_query + '0')
-                elif current_query[:-1] == '0':
-                  Qsc.pop()
-                  Qsc.extend([current_query[-1:] + '00', current_query[-1:] + '01'])
+            if current_query[:-1] == last_collision:
+              # Skip prefix q0
+              if current_query[-1:] == '1':
+                Qsc.pop()
+                Qsc.extend([current_query[:-1] + '00', current_query[:-1] + '01'])
+              # Skip prefix q1
+              elif current_query[-1:] == '0':
+                Qsc.pop()
+                Qsc.extend([current_query[:-1] + '10', current_query[:-1] + '11'])
+              
     
     end = time.time()
-    
     return collision, empty, sent_bits, end-start
 
 def saveMetricsToDf(df, tag_count, simulation, collision, empty, sent_bits, execution):
