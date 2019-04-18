@@ -3,8 +3,9 @@
     TODO:
         Garantir que os tag IDs gerados sejam únicos;
         Como gerar os plots dos comparativos (ver e-mail professor);
-        Implementar o QT-sc.
+        Verificar se o QT e o QT-sc estão funcionando corretamente.
 '''
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -29,7 +30,6 @@ class Metrics:
         self.tag_count = []
         self.simulation = []
 
-
 def QT(tags):
     collision = empty = sent_bits = 0
     Q = ['']
@@ -44,7 +44,7 @@ def QT(tags):
         # Find tags indexes that contain current prefix
         matched_indices = [i for i, tag in enumerate(tags) if tag.startswith(current_query)]
         
-        # Sum of Sent bits for each query
+        # Sum of each query sent bits 
         sent_bits += sum([len(tags[i]) for i in matched_indices])
 
         # Success
@@ -61,12 +61,13 @@ def QT(tags):
             empty += 1
     
     end = time.time()
-
+    
     return collision, empty, sent_bits, end-start
 
 
 def QTsc(tags):
     collision = empty = sent_bits = 0
+    last_bit_collided = ' '
     Qsc = ['']
     M = []
     start = time.time()
@@ -79,7 +80,7 @@ def QTsc(tags):
         # Find tags indexes that contain current prefix
         matched_indices = [i for i, tag in enumerate(tags) if tag.startswith(current_query)]
         
-        # Sum of Sent bits for each query
+        # Sum of each query sent bits
         sent_bits += sum([len(tags[i]) for i in matched_indices])
 
         # Success
@@ -89,29 +90,26 @@ def QTsc(tags):
         # Collision
         elif len(matched_indices) > 1:
             collision += 1
-            
-            '''
-            NÃO FUNCIONA: NÃO CONSEGUE LER TODAS AS TAGS 
-            (tamanho de M é menor que tamanho de tags)
-            '''
-            if current_query[-1:] == last_bit_collided:
-              if last_bit_collided == '0':
-                Qsc.extend([current_query + '10', current_query + '11'])
-              elif last_bit_collided == '1':
-                Qsc.extend([current_query + '00', current_query + '01'])
-            else:
-              Qsc.extend([current_query + '0', current_query + '1'])
-            
-            last_bit_collided = current_query[-1:]
+            Qsc.extend([current_query + '0', current_query + '1'])
+            last_collision = current_query
 
         # Empty            
         else: 
             empty += 1
+            if current_query != ' ':
+              if current_query == last_collision:
+                # Skip prefix (current_query + '1')
+                if current_query[:-1] == '0':  
+                  Qsc.pop()
+                  Qsc.extend([current_query[-1:] + '10', current_query[-1:] + '11'])
+                # Skip prefix (current_query + '0')
+                elif current_query[:-1] == '0':
+                  Qsc.pop()
+                  Qsc.extend([current_query[-1:] + '00', current_query[-1:] + '01'])
     
     end = time.time()
-
+    
     return collision, empty, sent_bits, end-start
-
 
 def saveMetricsToDf(df, tag_count, simulation, collision, empty, sent_bits, execution):
     df['TAG_COUNT'] = tag_count
@@ -123,7 +121,6 @@ def saveMetricsToDf(df, tag_count, simulation, collision, empty, sent_bits, exec
 
     return df
 
-
 def saveMetricsToObject(obj, simulation, tag_count, collision, empty, sent_bits, execution):
     obj.simulation.append(simulation)
     obj.tag_count.append(tag_count)
@@ -133,6 +130,7 @@ def saveMetricsToObject(obj, simulation, tag_count, collision, empty, sent_bits,
     obj.execution.append(execution)
 
     return obj
+
 
 
 def main():
