@@ -97,14 +97,14 @@ def QTsc(tags):
         else: 
             empty += 1
             if current_query[:-1] == last_collision:
-              # Skip prefix q0
-              if current_query[-1:] == '1':
+                # The prefix to be skipped will be on the top of the queue
                 Qsc.pop()
-                Qsc.extend([current_query[:-1] + '00', current_query[:-1] + '01'])
-              # Skip prefix q1
-              elif current_query[-1:] == '0':
-                Qsc.pop()
-                Qsc.extend([current_query[:-1] + '10', current_query[:-1] + '11'])
+                # Skip prefix q0
+                if current_query[-1:] == '1':
+                    Qsc.extend([current_query[:-1] + '00', current_query[:-1] + '01'])
+                # Skip prefix q1
+                elif current_query[-1:] == '0':
+                    Qsc.extend([current_query[:-1] + '10', current_query[:-1] + '11'])
               
     
     end = time.time()
