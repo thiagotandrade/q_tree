@@ -13,13 +13,6 @@ import random
 import time
 
 
-class SimulationParameters: 
-    SIMULATIONS = 100
-    MAX_TAGS = 1000
-    MIN_TAGS = 100
-    STEP = 100
-    TAG_LENGTH = 64
-
 # Lists to store all simulations data
 class Metrics:
     def __init__(self):
@@ -30,6 +23,7 @@ class Metrics:
         self.tag_count = []
         self.simulation = []
 
+        
 def QT(tags):
     collision = empty = sent_bits = 0
     Q = ['']
@@ -118,7 +112,6 @@ def saveMetricsToDf(df, tag_count, simulation, collision, empty, sent_bits, exec
     df['SENT_BITS'] = sent_bits
     df['SIMULATION_TIME'] = execution
 
-    return df
 
 def saveMetricsToObject(obj, simulation, tag_count, collision, empty, sent_bits, execution):
     obj.simulation.append(simulation)
@@ -128,19 +121,19 @@ def saveMetricsToObject(obj, simulation, tag_count, collision, empty, sent_bits,
     obj.sent_bits.append(sent_bits)
     obj.execution.append(execution)
 
-    return obj
-
 
 
 def main():
-    # Initializing variables
-    params = SimulationParameters()
+    # Simulation Parameters
+    params_index = ['SIMULATIONS', 'MAX_TAGS', 'MIN_TAGS', 'STEP', 'TAG_LENGTH']
+    params = pd.Series([100, 1000, 100, 100, 64], index=params_index)
+    # Initializing simulation variables
     tag_count = params.MIN_TAGS
     collision = empty = sent_bits = 0
     # List of tags IDs
     tags = []
         
-    # Objects to store simulation metrics
+    # Objects to store simulations metrics
     qt = Metrics()
     qtsc = Metrics()
 
@@ -157,25 +150,19 @@ def main():
             '''
                 QT Algorithm
             '''           
-            start = time.time()
-            # Query Tree Simulation
             collision, empty, sent_bits, execution = QT(tags)
-            end = time.time()
-            qt = saveMetricsToObject(qt, simulation, tag_count, collision, empty, sent_bits, execution)
+            saveMetricsToObject(qt, simulation, tag_count, collision, empty, sent_bits, execution)
 
             '''
                 QT-sc Algorithm
-            '''
-            start = time.time()
-            # Query Tree Shortcut Simulation            
+            '''            
             collision, empty, sent_bits, execution = QTsc(tags)
-            end = time.time()
-            qtsc = saveMetricsToObject(qtsc, simulation, tag_count, collision, empty, sent_bits, execution)
+            saveMetricsToObject(qtsc, simulation, tag_count, collision, empty, sent_bits, execution)
 
             # Clear tags list for next simulation
             tags = []
 
-        
+        # Increase number of tags based on step value
         tag_count += params.STEP
     
 
@@ -183,11 +170,13 @@ def main():
     column_names = ['SIMULATION_NUMBER', 'TAG_COUNT', 'COLISION_SLOTS', 'EMPTY_SLOTS', 'SENT_BITS', 'SIMULATION_TIME']
     qt_df = pd.DataFrame(columns=column_names)
     qtsc_df = pd.DataFrame(columns=column_names)
-    qt_df = saveMetricsToDf(qt_df, qt.tag_count, qt.simulation, qt.collision, qt.empty, qt.sent_bits, qt.execution)
-    qtsc_df = saveMetricsToDf(qtsc_df, qtsc.tag_count, qtsc.simulation, qtsc.collision, qtsc.empty, qtsc.sent_bits, qtsc.execution)
+    saveMetricsToDf(qt_df, qt.tag_count, qt.simulation, qt.collision, qt.empty, qt.sent_bits, qt.execution)
+    saveMetricsToDf(qtsc_df, qtsc.tag_count, qtsc.simulation, qtsc.collision, qtsc.empty, qtsc.sent_bits, qtsc.execution)
 
-    qt_df.to_csv('qt.csv', index=False)
-    qtsc_df.to_csv('qtsc.csv', index=False)
+    # qt_df.to_csv('qt.csv', index=False)
+    # qtsc_df.to_csv('qtsc.csv', index=False)
+
+    # Create Function to plot results accordingly
 
 
 
