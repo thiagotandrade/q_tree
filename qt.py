@@ -1,16 +1,10 @@
 # coding=utf-8
-'''
-    TODO:
-        Garantir que os tag IDs gerados sejam únicos;
-        Como gerar os plots dos comparativos (ver e-mail professor);
-        Verificar se o QT e o QT-sc estão funcionando corretamente.
-'''
 
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import random
 import time
+from bokeh.plotting import figure, output_file, show
+from bokeh.layouts import row
 
 
 # Lists to store all simulations data
@@ -107,11 +101,10 @@ def QTsc(tags):
 def saveMetricsToDf(df, tag_count, simulation, collision, empty, sent_bits, execution):
     df['TAG_COUNT'] = tag_count
     df['SIMULATION_NUMBER'] = simulation
-    df['COLISION_SLOTS'] = collision
+    df['COLLISION_SLOTS'] = collision
     df['EMPTY_SLOTS'] = empty
     df['SENT_BITS'] = sent_bits
     df['SIMULATION_TIME'] = execution
-
 
 def saveMetricsToObject(obj, simulation, tag_count, collision, empty, sent_bits, execution):
     obj.simulation.append(simulation)
@@ -120,6 +113,60 @@ def saveMetricsToObject(obj, simulation, tag_count, collision, empty, sent_bits,
     obj.empty.append(empty)
     obj.sent_bits.append(sent_bits)
     obj.execution.append(execution)
+
+def plotResults(qt, qtsc):
+    TOOLS='pan,wheel_zoom,box_zoom,reset,hover'
+    output_file('plots.html')
+
+    # Colisões
+    p1 = figure(title='Média de Colisões por # Tags', width=400, height=400, 
+                tools=TOOLS, toolbar_location='below')
+    p1.yaxis.axis_label = '# Colisões médias'
+    p1.xaxis.axis_label = '# Tags'
+
+    p1.circle(qt.index, qt['COLLISION_SLOTS'], legend="QT",
+                line_color="red", fill_color='red', size=5)
+    p1.line(qt.index, qt['COLLISION_SLOTS'], legend="QT",
+                line_color="red", line_width=2, line_dash='dashed', line_dash_offset=10)
+
+    p1.circle(qtsc.index, qtsc['COLLISION_SLOTS'], legend="QTsc",
+            line_color="green", fill_color='green', size=5)
+    p1.line(qtsc.index, qtsc['COLLISION_SLOTS'], legend="QTsc",
+            line_color="green", line_width=2, line_dash='dotted')
+
+    # Vazios
+    p2 = figure(title='Média de Slots Vazios por # Tags', width=400, height=400, 
+                tools=TOOLS, toolbar_location='below')
+    p2.yaxis.axis_label = '# Slots Vazios Médios'
+    p2.xaxis.axis_label = '# Tags'
+
+    p2.circle(qt.index, qt['EMPTY_SLOTS'], legend="QT",
+                line_color="red", fill_color='red', size=6, fill_alpha=0.6)
+    p2.line(qt.index, qt['EMPTY_SLOTS'], legend="QT",
+                line_color="red", line_width=2, line_dash='dashed', line_dash_offset=10, alpha=0.6)
+
+    p2.circle(qtsc.index, qtsc['EMPTY_SLOTS'], legend="QTsc",
+            line_color="green", fill_color='green', size=5, fill_alpha=0.3)
+    p2.line(qtsc.index, qtsc['EMPTY_SLOTS'], legend="QTsc",
+            line_color="green", line_width=2, line_dash='solid', alpha=0.3)
+
+    # Bits
+    p3 = figure(title='Média de Bits Enviados por # Tags', width=400, height=400, 
+                tools=TOOLS, toolbar_location='below')
+    p3.yaxis.axis_label = '# Bits Enviados Médios'
+    p3.xaxis.axis_label = '# Tags'
+
+    p3.circle(qt.index, qt['SENT_BITS'], legend="QT",
+                line_color="red", fill_color='red', size=5)
+    p3.line(qt.index, qt['SENT_BITS'], legend="QT",
+                line_color="red", line_width=2, line_dash='dashed', line_dash_offset=10)
+
+    p3.circle(qtsc.index, qtsc['SENT_BITS'], legend="QTsc",
+            line_color="green", fill_color='green', size=5)
+    p3.line(qtsc.index, qtsc['SENT_BITS'], legend="QTsc",
+            line_color="green", line_width=2, line_dash='dotted')
+
+    show(row(p1,p2, p3))
 
 
 
@@ -167,17 +214,19 @@ def main():
     
 
     # Save results into Dataframes for plotting
-    column_names = ['SIMULATION_NUMBER', 'TAG_COUNT', 'COLISION_SLOTS', 'EMPTY_SLOTS', 'SENT_BITS', 'SIMULATION_TIME']
+    column_names = ['SIMULATION_NUMBER', 'TAG_COUNT', 'COLLISION_SLOTS', 'EMPTY_SLOTS', 'SENT_BITS', 'SIMULATION_TIME']
     qt_df = pd.DataFrame(columns=column_names)
     qtsc_df = pd.DataFrame(columns=column_names)
     saveMetricsToDf(qt_df, qt.tag_count, qt.simulation, qt.collision, qt.empty, qt.sent_bits, qt.execution)
     saveMetricsToDf(qtsc_df, qtsc.tag_count, qtsc.simulation, qtsc.collision, qtsc.empty, qtsc.sent_bits, qtsc.execution)
 
-    # qt_df.to_csv('qt.csv', index=False)
-    # qtsc_df.to_csv('qtsc.csv', index=False)
+    qt_df.to_csv('qt.csv', index=False)
+    qtsc_df.to_csv('qtsc.csv', index=False)
 
-    # Create Function to plot results accordingly
-
+    # Plotting results accordingly
+    qt_per_tag_count = (qt_df.drop(['SIMULATION_NUMBER'], axis=1).groupby(['TAG_COUNT']).sum()) / params.SIMULATIONS
+    qtsc_per_tag_count = (qtsc_df.drop(['SIMULATION_NUMBER'], axis=1).groupby(['TAG_COUNT']).sum()) / params.SIMULATIONS
+    plotResults(qt_per_tag_count, qtsc_per_tag_count)
 
 
 if __name__ == '__main__':
