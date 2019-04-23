@@ -4,7 +4,7 @@ import pandas as pd
 import random
 import time
 from bokeh.plotting import figure, output_file, show
-from bokeh.layouts import row
+from bokeh.layouts import column, row
 
 
 # Lists to store all simulations data
@@ -16,10 +16,11 @@ class Metrics:
         self.execution = []
         self.tag_count = []
         self.simulation = []
+        self.total = []
 
         
 def QT(tags):
-    collision = empty = sent_bits = 0
+    success = collision = empty = sent_bits = 0
     Q = ['']
     M = []
     start = time.time()
@@ -37,6 +38,7 @@ def QT(tags):
 
         # Success
         if len(matched_indices) == 1: 
+            success += 1
             M.append(tags[matched_indices[0]])
 
         # Collision
@@ -50,11 +52,11 @@ def QT(tags):
     
     end = time.time()
     
-    return collision, empty, sent_bits, end-start
+    return collision, empty, sent_bits, end-start, (collision + empty + success)
 
 
 def QTsc(tags):
-    collision = empty = sent_bits = 0
+    success = collision = empty = sent_bits = 0
     last_bit_collided = ' '
     Qsc = ['']
     M = []
@@ -73,6 +75,7 @@ def QTsc(tags):
 
         # Success
         if len(matched_indices) == 1: 
+            success += 1
             M.append(tags[matched_indices[0]])
 
         # Collision
@@ -96,23 +99,25 @@ def QTsc(tags):
               
     
     end = time.time()
-    return collision, empty, sent_bits, end-start
+    return collision, empty, sent_bits, end-start, (collision + empty + success)
 
-def saveMetricsToDf(df, tag_count, simulation, collision, empty, sent_bits, execution):
+def saveMetricsToDf(df, tag_count, simulation, collision, empty, sent_bits, execution, total):
     df['TAG_COUNT'] = tag_count
     df['SIMULATION_NUMBER'] = simulation
     df['COLLISION_SLOTS'] = collision
     df['EMPTY_SLOTS'] = empty
     df['SENT_BITS'] = sent_bits
     df['SIMULATION_TIME'] = execution
+    df['TOTAL_SLOTS'] = total
 
-def saveMetricsToObject(obj, simulation, tag_count, collision, empty, sent_bits, execution):
+def saveMetricsToObject(obj, simulation, tag_count, collision, empty, sent_bits, execution, total):
     obj.simulation.append(simulation)
     obj.tag_count.append(tag_count)
     obj.collision.append(collision)
     obj.empty.append(empty)
     obj.sent_bits.append(sent_bits)
     obj.execution.append(execution)
+    obj.total.append(total)
 
 def plotResults(qt, qtsc):
     TOOLS='pan,wheel_zoom,box_zoom,reset,hover'
@@ -121,7 +126,7 @@ def plotResults(qt, qtsc):
     # Colisões
     p1 = figure(title='Média de Colisões por # Tags', width=400, height=400, 
                 tools=TOOLS, toolbar_location='below')
-    p1.yaxis.axis_label = '# Colisões médias'
+    p1.yaxis.axis_label = 'Média de Colisões '
     p1.xaxis.axis_label = '# Tags'
 
     p1.circle(qt.index, qt['COLLISION_SLOTS'], legend="QT",
@@ -137,7 +142,7 @@ def plotResults(qt, qtsc):
     # Vazios
     p2 = figure(title='Média de Slots Vazios por # Tags', width=400, height=400, 
                 tools=TOOLS, toolbar_location='below')
-    p2.yaxis.axis_label = '# Slots Vazios Médios'
+    p2.yaxis.axis_label = 'Média de Slots Vazios'
     p2.xaxis.axis_label = '# Tags'
 
     p2.circle(qt.index, qt['EMPTY_SLOTS'], legend="QT",
@@ -153,7 +158,7 @@ def plotResults(qt, qtsc):
     # Bits
     p3 = figure(title='Média de Bits Enviados por # Tags', width=400, height=400, 
                 tools=TOOLS, toolbar_location='below')
-    p3.yaxis.axis_label = '# Bits Enviados Médios'
+    p3.yaxis.axis_label = 'Média de Bits Enviados'
     p3.xaxis.axis_label = '# Tags'
 
     p3.circle(qt.index, qt['SENT_BITS'], legend="QT",
@@ -166,7 +171,40 @@ def plotResults(qt, qtsc):
     p3.line(qtsc.index, qtsc['SENT_BITS'], legend="QTsc",
             line_color="green", line_width=2, line_dash='dotted')
 
-    show(row(p1,p2, p3))
+    # Tempo de Simulação
+    p4 = figure(title='Média de Tempo de Simulação por # Tags', width=400, height=400, 
+        tools=TOOLS, toolbar_location='below')
+    p4.yaxis.axis_label = 'Média de Tempo de Simulação'
+    p4.xaxis.axis_label = '# Tags'
+    
+    p4.circle(qt.index, qt['SIMULATION_TIME'], legend="QT",
+                line_color="red", fill_color='red', size=5)
+    p4.line(qt.index, qt['SIMULATION_TIME'], legend="QT",
+                line_color="red", line_width=2, line_dash='dashed', line_dash_offset=10)
+
+    p4.circle(qtsc.index, qtsc['SIMULATION_TIME'], legend="QTsc",
+            line_color="green", fill_color='green', size=5)
+    p4.line(qtsc.index, qtsc['SIMULATION_TIME'], legend="QTsc",
+            line_color="green", line_width=2, line_dash='dotted')
+    
+    # Total Slots
+    p5 = figure(title='Total de Slots Médio por # Tags', width=400, height=400, 
+                tools=TOOLS, toolbar_location='below')
+    p5.yaxis.axis_label = 'Média de Total de Slots'
+    p5.xaxis.axis_label = '# Tags'
+
+    p5.circle(qt.index, qt['TOTAL_SLOTS'], legend="QT",
+                line_color="red", fill_color='red', size=5)
+    p5.line(qt.index, qt['TOTAL_SLOTS'], legend="QT",
+                line_color="red", line_width=2, line_dash='dashed', line_dash_offset=10)
+
+    p5.circle(qtsc.index, qtsc['TOTAL_SLOTS'], legend="QTsc",
+            line_color="green", fill_color='green', size=5)
+    p5.line(qtsc.index, qtsc['TOTAL_SLOTS'], legend="QTsc",
+            line_color="green", line_width=2, line_dash='dotted')
+    
+
+    show(column(row(p1,p2, p3), row(p4, p5)))
 
 
 
@@ -176,7 +214,7 @@ def main():
     params = pd.Series([100, 1000, 100, 100, 64], index=params_index)
     # Initializing simulation variables
     tag_count = params.MIN_TAGS
-    collision = empty = sent_bits = 0
+    total = collision = empty = sent_bits = 0
     # List of tags IDs
     tags = []
         
@@ -197,14 +235,14 @@ def main():
             '''
                 QT Algorithm
             '''           
-            collision, empty, sent_bits, execution = QT(tags)
-            saveMetricsToObject(qt, simulation, tag_count, collision, empty, sent_bits, execution)
+            collision, empty, sent_bits, execution, total = QT(tags)
+            saveMetricsToObject(qt, simulation, tag_count, collision, empty, sent_bits, execution, total)
 
             '''
                 QT-sc Algorithm
             '''            
-            collision, empty, sent_bits, execution = QTsc(tags)
-            saveMetricsToObject(qtsc, simulation, tag_count, collision, empty, sent_bits, execution)
+            collision, empty, sent_bits, execution, total = QTsc(tags)
+            saveMetricsToObject(qtsc, simulation, tag_count, collision, empty, sent_bits, execution, total)
 
             # Clear tags list for next simulation
             tags = []
@@ -214,11 +252,11 @@ def main():
     
 
     # Save results into Dataframes for plotting
-    column_names = ['SIMULATION_NUMBER', 'TAG_COUNT', 'COLLISION_SLOTS', 'EMPTY_SLOTS', 'SENT_BITS', 'SIMULATION_TIME']
+    column_names = ['SIMULATION_NUMBER', 'TAG_COUNT', 'COLLISION_SLOTS', 'EMPTY_SLOTS', 'SENT_BITS', 'SIMULATION_TIME', 'TOTAL_SLOTS']
     qt_df = pd.DataFrame(columns=column_names)
     qtsc_df = pd.DataFrame(columns=column_names)
-    saveMetricsToDf(qt_df, qt.tag_count, qt.simulation, qt.collision, qt.empty, qt.sent_bits, qt.execution)
-    saveMetricsToDf(qtsc_df, qtsc.tag_count, qtsc.simulation, qtsc.collision, qtsc.empty, qtsc.sent_bits, qtsc.execution)
+    saveMetricsToDf(qt_df, qt.tag_count, qt.simulation, qt.collision, qt.empty, qt.sent_bits, qt.execution, qt.total)
+    saveMetricsToDf(qtsc_df, qtsc.tag_count, qtsc.simulation, qtsc.collision, qtsc.empty, qtsc.sent_bits, qtsc.execution, qtsc.total)
 
     qt_df.to_csv('qt.csv', index=False)
     qtsc_df.to_csv('qtsc.csv', index=False)
