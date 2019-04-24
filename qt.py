@@ -41,6 +41,7 @@ def QT(tags):
         if len(matched_indices) == 1: 
             success += 1
             M.append(tags[matched_indices[0]])
+            tags.remove(tags[matched_indices[0]])
 
         # Collision
         elif len(matched_indices) > 1:
@@ -78,6 +79,7 @@ def QTsc(tags):
         if len(matched_indices) == 1: 
             success += 1
             M.append(tags[matched_indices[0]])
+            tags.remove(tags[matched_indices[0]])
 
         # Collision
         elif len(matched_indices) > 1:
@@ -251,17 +253,13 @@ def main():
         for simulation in range(1,params.SIMULATIONS+1): 
             print("{} ".format(simulation), end='')
 
-            # Generate unique random tags IDs
-            while len(tags) < tag_count:
-                tag = generateRandomTag(params.TAG_LENGTH)
-                while tag in tags:
-                    tag = generateRandomTag(params.TAG_LENGTH)
-                tags.append(tag)
+            # Generate random tags IDs
+            tags.extend([generateRandomTag(params.TAG_LENGTH) for _ in range(tag_count)])
 
             '''
                 QT Algorithm
             '''           
-            collision, empty, sent_bits, execution, total = QT(tags)
+            collision, empty, sent_bits, execution, total = QT(tags.copy())
             saveMetricsToObject(qt, simulation, tag_count, collision, empty, sent_bits, execution, total)
 
             '''
