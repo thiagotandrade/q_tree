@@ -1,5 +1,6 @@
 # coding=utf-8
 
+import numpy as np
 import pandas as pd
 import random
 import time
@@ -52,7 +53,7 @@ def QT(tags):
     
     end = time.time()
     
-    return collision, empty, sent_bits, end-start, (collision + empty + success)
+    return collision, empty, sent_bits, (end - start)*1000, (collision + empty + success)
 
 
 def QTsc(tags):
@@ -99,7 +100,7 @@ def QTsc(tags):
               
     
     end = time.time()
-    return collision, empty, sent_bits, end-start, (collision + empty + success)
+    return collision, empty, sent_bits, (end - start)*1000, (collision + empty + success)
 
 def saveMetricsToDf(df, tag_count, simulation, collision, empty, sent_bits, execution, total):
     df['TAG_COUNT'] = tag_count
@@ -119,12 +120,15 @@ def saveMetricsToObject(obj, simulation, tag_count, collision, empty, sent_bits,
     obj.execution.append(execution)
     obj.total.append(total)
 
+def generateRandomTag(length):
+   return bin(random.getrandbits(length))[2:].zfill(length)
+
 def plotResults(qt, qtsc):
     TOOLS='pan,wheel_zoom,box_zoom,reset,hover'
     output_file('plots.html')
 
-    # Colisões
-    p1 = figure(title='Média de Colisões por # Tags', width=400, height=400, 
+    # Collisions
+    p1 = figure(title='Média de Colisões por # Tags', 
                 tools=TOOLS, toolbar_location='below')
     p1.yaxis.axis_label = 'Média de Colisões '
     p1.xaxis.axis_label = '# Tags'
@@ -139,8 +143,12 @@ def plotResults(qt, qtsc):
     p1.line(qtsc.index, qtsc['COLLISION_SLOTS'], legend="QTsc",
             line_color="green", line_width=2, line_dash='dotted')
 
-    # Vazios
-    p2 = figure(title='Média de Slots Vazios por # Tags', width=400, height=400, 
+    p1.legend.location = "top_left"
+    p1.legend.click_policy="hide"
+
+
+    # Empty
+    p2 = figure(title='Média de Slots Vazios por # Tags', 
                 tools=TOOLS, toolbar_location='below')
     p2.yaxis.axis_label = 'Média de Slots Vazios'
     p2.xaxis.axis_label = '# Tags'
@@ -155,8 +163,12 @@ def plotResults(qt, qtsc):
     p2.line(qtsc.index, qtsc['EMPTY_SLOTS'], legend="QTsc",
             line_color="green", line_width=2, line_dash='solid', alpha=0.3)
 
+    p2.legend.location = "top_left"
+    p2.legend.click_policy="hide"
+
+
     # Bits
-    p3 = figure(title='Média de Bits Enviados por # Tags', width=400, height=400, 
+    p3 = figure(title='Média de Bits Enviados por # Tags', 
                 tools=TOOLS, toolbar_location='below')
     p3.yaxis.axis_label = 'Média de Bits Enviados'
     p3.xaxis.axis_label = '# Tags'
@@ -171,10 +183,14 @@ def plotResults(qt, qtsc):
     p3.line(qtsc.index, qtsc['SENT_BITS'], legend="QTsc",
             line_color="green", line_width=2, line_dash='dotted')
 
-    # Tempo de Simulação
-    p4 = figure(title='Média de Tempo de Simulação por # Tags', width=400, height=400, 
+    p3.legend.location = "top_left"
+    p3.legend.click_policy="hide"
+
+
+    # Simulation Time
+    p4 = figure(title='Média de Tempo de Simulação (ms) por # Tags', 
         tools=TOOLS, toolbar_location='below')
-    p4.yaxis.axis_label = 'Média de Tempo de Simulação'
+    p4.yaxis.axis_label = 'Média de Tempo de Simulação (ms)'
     p4.xaxis.axis_label = '# Tags'
     
     p4.circle(qt.index, qt['SIMULATION_TIME'], legend="QT",
@@ -186,9 +202,13 @@ def plotResults(qt, qtsc):
             line_color="green", fill_color='green', size=5)
     p4.line(qtsc.index, qtsc['SIMULATION_TIME'], legend="QTsc",
             line_color="green", line_width=2, line_dash='dotted')
-    
+
+    p4.legend.location = "top_left"
+    p4.legend.click_policy="hide"    
+
+
     # Total Slots
-    p5 = figure(title='Total de Slots Médio por # Tags', width=400, height=400, 
+    p5 = figure(title='Total de Slots Médio por # Tags', 
                 tools=TOOLS, toolbar_location='below')
     p5.yaxis.axis_label = 'Média de Total de Slots'
     p5.xaxis.axis_label = '# Tags'
@@ -202,9 +222,11 @@ def plotResults(qt, qtsc):
             line_color="green", fill_color='green', size=5)
     p5.line(qtsc.index, qtsc['TOTAL_SLOTS'], legend="QTsc",
             line_color="green", line_width=2, line_dash='dotted')
-    
 
-    show(column(row(p1,p2, p3), row(p4, p5)))
+    p5.legend.location = "top_left"
+    p5.legend.click_policy="hide"    
+
+    show(row(p1, p2, p3, p4, p5))
 
 
 
@@ -229,9 +251,13 @@ def main():
         for simulation in range(1,params.SIMULATIONS+1): 
             print("{} ".format(simulation), end='')
 
-            # Generate random tags IDs
-            tags.extend([bin(random.getrandbits(params.TAG_LENGTH))[2:].zfill(params.TAG_LENGTH) for _ in range(tag_count)])
-            
+            # Generate unique random tags IDs
+            while len(tags) < tag_count:
+                tag = generateRandomTag(params.TAG_LENGTH)
+                while tag in tags:
+                    tag = generateRandomTag(params.TAG_LENGTH)
+                tags.append(tag)
+
             '''
                 QT Algorithm
             '''           
