@@ -6,6 +6,8 @@ import random
 import time
 from bokeh.plotting import figure, output_file, show
 from bokeh.layouts import column, row
+#from bokeh.io import output_notebook
+#output_notebook()
 
 
 # Lists to store all simulations data
@@ -103,7 +105,93 @@ def QTsc(tags):
     
     end = time.time()
     return collision, empty, sent_bits, (end - start)*1000, (collision + empty + success)
+  
+  
+def QT4(tags):
+    success = collision = empty = sent_bits = 0
+    Q = ['']
+    M = []
+    start = time.time()
 
+    # Query Tree algorithm
+    while Q:
+        # Current query will be the top of the stack of queries
+        current_query = Q.pop()
+
+        # Find tags indexes that contain current prefix
+        matched_indices = [i for i, tag in enumerate(tags) if tag.startswith(current_query)]
+        
+        # Sum of each query sent bits 
+        sent_bits += sum([len(tags[i]) for i in matched_indices])
+
+        # Success
+        if len(matched_indices) == 1: 
+            success += 1
+            M.append(tags[matched_indices[0]])
+            tags.remove(tags[matched_indices[0]])
+
+        # Collision
+        elif len(matched_indices) > 1:
+            Q.extend([current_query + '00', current_query + '01', current_query + '10', current_query + '11'])
+            collision += 1
+
+        # Empty            
+        else: 
+            empty += 1
+    
+    end = time.time()
+    print(success)
+    return collision, empty, sent_bits, (end-start)*1000, (collision + empty + success)
+
+  
+def QTsc4(tags):
+    success = collision = empty = sent_bits = 0
+    last_collision = ' '
+    Qsc = ['']
+    M = []
+    start = time.time()
+    
+    # Query Tree Shortcut algorithm
+    while Qsc:
+        # Current query will be the top of the stack of queries
+        current_query = Qsc.pop()
+
+        # Find tags indexes that contain current prefix
+        matched_indices = [i for i, tag in enumerate(tags) if tag.startswith(current_query)]
+        
+        # Sum of each query sent bits
+        sent_bits += sum([len(tags[i]) for i in matched_indices])
+
+        # Success
+        if len(matched_indices) == 1: 
+            success += 1
+            M.append(tags[matched_indices[0]])
+            tags.remove(tags[matched_indices[0]])
+
+        # Collision
+        elif len(matched_indices) > 1:
+            collision += 1
+            Qsc.extend([current_query + '00', current_query + '01', current_query + '10', current_query + '11'])
+            last_collision = current_query
+
+        # Empty            
+        else: 
+            empty += 1
+            if current_query[:-] == last_collision:
+                # The prefix to be skipped will be on the top of the queue
+                Qsc.pop()
+                # Skip prefix q0
+                if current_query[-1:] == '1':
+                    Qsc.extend([current_query[:-1] + '00', current_query[:-1] + '01'])
+                # Skip prefix q1
+                elif current_query[-1:] == '0':
+                    Qsc.extend([current_query[:-1] + '10', current_query[:-1] + '11'])  
+
+    end = time.time()
+    
+    return collision, empty, sent_bits, (end-start)*1000, (collision + empty + success)
+  
+  
 def saveMetricsToDf(df, tag_count, simulation, collision, empty, sent_bits, execution, total):
     df['TAG_COUNT'] = tag_count
     df['SIMULATION_NUMBER'] = simulation
@@ -125,11 +213,11 @@ def saveMetricsToObject(obj, simulation, tag_count, collision, empty, sent_bits,
 def generateRandomTag(length):
    return bin(random.getrandbits(length))[2:].zfill(length)
 
-def plotResults(qt, qtsc):
+def plotResults(qt, qtsc, qt4, qtsc4):
     TOOLS='pan,wheel_zoom,box_zoom,reset,hover'
     output_file('plots.html')
 
-    # Collisions
+    # Colisões
     p1 = figure(title='Média de Colisões por # Tags', 
                 tools=TOOLS, toolbar_location='below')
     p1.yaxis.axis_label = 'Média de Colisões '
@@ -144,12 +232,21 @@ def plotResults(qt, qtsc):
             line_color="green", fill_color='green', size=5)
     p1.line(qtsc.index, qtsc['COLLISION_SLOTS'], legend="QTsc",
             line_color="green", line_width=2, line_dash='dotted')
+    
+    p1.circle(qt4.index, qt4['COLLISION_SLOTS'], legend="QT-4",
+            line_color="blue", fill_color='blue', size=5)
+    p1.line(qt4.index, qt4['COLLISION_SLOTS'], legend="QT-4",
+            line_color="blue", line_width=2, line_dash='dotdash')
+    
+    p1.circle(qtsc4.index, qtsc4['COLLISION_SLOTS'], legend="QTsc-4",
+            line_color="black", fill_color='black', size=5)
+    p1.line(qtsc4.index, qtsc4['COLLISION_SLOTS'], legend="QTsc-4",
+            line_color="black", line_width=2, line_dash='dashdot')
 
     p1.legend.location = "top_left"
     p1.legend.click_policy="hide"
-
-
-    # Empty
+    
+    # Vazios
     p2 = figure(title='Média de Slots Vazios por # Tags', 
                 tools=TOOLS, toolbar_location='below')
     p2.yaxis.axis_label = 'Média de Slots Vazios'
@@ -164,11 +261,20 @@ def plotResults(qt, qtsc):
             line_color="green", fill_color='green', size=5, fill_alpha=0.3)
     p2.line(qtsc.index, qtsc['EMPTY_SLOTS'], legend="QTsc",
             line_color="green", line_width=2, line_dash='solid', alpha=0.3)
-
+    
+    p2.circle(qt4.index, qt4['EMPTY_SLOTS'], legend="QT-4",
+            line_color="blue", fill_color='blue', size=5)
+    p2.line(qt4.index, qt4['EMPTY_SLOTS'], legend="QT-4",
+            line_color="blue", line_width=2, line_dash='dotdash')
+    
+    p2.circle(qtsc4.index, qtsc4['EMPTY_SLOTS'], legend="QTsc-4",
+            line_color="black", fill_color='black', size=5)
+    p2.line(qtsc4.index, qtsc4['EMPTY_SLOTS'], legend="QTsc-4",
+            line_color="black", line_width=2, line_dash='dashdot')
+    
     p2.legend.location = "top_left"
     p2.legend.click_policy="hide"
-
-
+    
     # Bits
     p3 = figure(title='Média de Bits Enviados por # Tags', 
                 tools=TOOLS, toolbar_location='below')
@@ -184,12 +290,31 @@ def plotResults(qt, qtsc):
             line_color="green", fill_color='green', size=5)
     p3.line(qtsc.index, qtsc['SENT_BITS'], legend="QTsc",
             line_color="green", line_width=2, line_dash='dotted')
-
+    
+    p3.circle(qtsc.index, qt4['SENT_BITS'], legend="QT-4",
+            line_color="blue", fill_color='blue', size=5)
+    p3.line(qtsc.index, qtsc['SENT_BITS'], legend="QT-4",
+            line_color="blue", line_width=2, line_dash='dotdash')
+    
+    p3.circle(qtsc.index, qt4['SENT_BITS'], legend="QTsc-4",
+            line_color="black", fill_color='black', size=5)
+    p3.line(qtsc.index, qtsc['SENT_BITS'], legend="QTsc-4",
+            line_color="black", line_width=2, line_dash='dashdot')
+    
+    p3.circle(qt4.index, qt4['SENT_BITS'], legend="QT-4",
+            line_color="blue", fill_color='blue', size=5)
+    p3.line(qt4.index, qt4['SENT_BITS'], legend="QT-4",
+            line_color="blue", line_width=2, line_dash='dotdash')
+    
+    p3.circle(qtsc4.index, qtsc4['SENT_BITS'], legend="QTsc-4",
+            line_color="black", fill_color='black', size=5)
+    p3.line(qtsc4.index, qtsc4['SENT_BITS'], legend="QTsc-4",
+            line_color="black", line_width=2, line_dash='dashdot')
+ 
     p3.legend.location = "top_left"
     p3.legend.click_policy="hide"
 
-
-    # Simulation Time
+    # Tempo de Simulação
     p4 = figure(title='Média de Tempo de Simulação (ms) por # Tags', 
         tools=TOOLS, toolbar_location='below')
     p4.yaxis.axis_label = 'Média de Tempo de Simulação (ms)'
@@ -204,11 +329,20 @@ def plotResults(qt, qtsc):
             line_color="green", fill_color='green', size=5)
     p4.line(qtsc.index, qtsc['SIMULATION_TIME'], legend="QTsc",
             line_color="green", line_width=2, line_dash='dotted')
-
+   
+    p4.circle(qt4.index, qt4['SIMULATION_TIME'], legend="QT-4",
+            line_color="blue", fill_color='blue', size=5)
+    p4.line(qt4.index, qt4['SIMULATION_TIME'], legend="QT-4",
+            line_color="blue", line_width=2, line_dash='dotdash')
+    
+    p4.circle(qtsc4.index, qtsc4['SIMULATION_TIME'], legend="QTsc-4",
+            line_color="black", fill_color='black', size=5)
+    p4.line(qtsc4.index, qtsc4['SIMULATION_TIME'], legend="QTsc-4",
+            line_color="black", line_width=2, line_dash='dashdot')
+    
     p4.legend.location = "top_left"
-    p4.legend.click_policy="hide"    
-
-
+    p4.legend.click_policy="hide"
+  
     # Total Slots
     p5 = figure(title='Total de Slots Médio por # Tags', 
                 tools=TOOLS, toolbar_location='below')
@@ -225,10 +359,20 @@ def plotResults(qt, qtsc):
     p5.line(qtsc.index, qtsc['TOTAL_SLOTS'], legend="QTsc",
             line_color="green", line_width=2, line_dash='dotted')
 
+    p5.circle(qt4.index, qt4['TOTAL_SLOTS'], legend="QT-4",
+            line_color="blue", fill_color='blue', size=5)
+    p5.line(qt4.index, qt4['TOTAL_SLOTS'], legend="QT-4",
+            line_color="blue", line_width=2, line_dash='dotdash')
+    
+    p5.circle(qtsc4.index, qtsc4['TOTAL_SLOTS'], legend="QTsc-4",
+            line_color="black", fill_color='black', size=5)
+    p5.line(qtsc4.index, qtsc4['TOTAL_SLOTS'], legend="QTsc-4",
+            line_color="black", line_width=2, line_dash='dashdot')
+    
     p5.legend.location = "top_left"
-    p5.legend.click_policy="hide"    
-
-    show(row(p1, p2, p3, p4, p5))
+    p5.legend.click_policy="hide"
+    
+    show(row(p1,p2, p3, p4, p5))
 
 
 
@@ -245,6 +389,8 @@ def main():
     # Objects to store simulations metrics
     qt = Metrics()
     qtsc = Metrics()
+    qt4 = Metrics()
+    qtsc4 = Metrics()
 
     while tag_count <= params.MAX_TAGS:
         print("\nTag count: {}".format(tag_count))
@@ -265,9 +411,22 @@ def main():
             '''
                 QT-sc Algorithm
             '''            
-            collision, empty, sent_bits, execution, total = QTsc(tags)
+            collision, empty, sent_bits, execution, total = QTsc(tags.copy())
             saveMetricsToObject(qtsc, simulation, tag_count, collision, empty, sent_bits, execution, total)
+            
+            '''
+                QT Quaternary Algorithm
+            '''           
+            collision, empty, sent_bits, execution, total = QT4(tags.copy())
+            saveMetricsToObject(qt4, simulation, tag_count, collision, empty, sent_bits, execution, total)
 
+            '''
+                QT-sc Quaternary Algorithm
+            '''            
+            collision, empty, sent_bits, execution, total = QTsc4(tags.copy())
+            saveMetricsToObject(qtsc4, simulation, tag_count, collision, empty, sent_bits, execution, total)  
+            
+            
             # Clear tags list for next simulation
             tags = []
 
@@ -279,17 +438,22 @@ def main():
     column_names = ['SIMULATION_NUMBER', 'TAG_COUNT', 'COLLISION_SLOTS', 'EMPTY_SLOTS', 'SENT_BITS', 'SIMULATION_TIME', 'TOTAL_SLOTS']
     qt_df = pd.DataFrame(columns=column_names)
     qtsc_df = pd.DataFrame(columns=column_names)
+    qt4_df = pd.DataFrame(columns=column_names)
+    qtsc4_df = pd.DataFrame(columns=column_names)
+    saveMetricsToDf(qt_df, qt.tag_count, qt.simulation, qt.collision, qt.empty, qt.sent_bits, qt.execution, qt.total)
     saveMetricsToDf(qt_df, qt.tag_count, qt.simulation, qt.collision, qt.empty, qt.sent_bits, qt.execution, qt.total)
     saveMetricsToDf(qtsc_df, qtsc.tag_count, qtsc.simulation, qtsc.collision, qtsc.empty, qtsc.sent_bits, qtsc.execution, qtsc.total)
+    saveMetricsToDf(qt4_df, qt4.tag_count, qt4.simulation, qt4.collision, qt4.empty, qt4.sent_bits, qt4.execution, qt4.total)
+    saveMetricsToDf(qtsc4_df, qtsc4.tag_count, qtsc4.simulation, qtsc4.collision, qtsc4.empty, qtsc4.sent_bits, qtsc4.execution, qtsc4.total)
 
-    qt_df.to_csv('qt.csv', index=False)
-    qtsc_df.to_csv('qtsc.csv', index=False)
+    
 
     # Plotting results accordingly
     qt_per_tag_count = (qt_df.drop(['SIMULATION_NUMBER'], axis=1).groupby(['TAG_COUNT']).sum()) / params.SIMULATIONS
     qtsc_per_tag_count = (qtsc_df.drop(['SIMULATION_NUMBER'], axis=1).groupby(['TAG_COUNT']).sum()) / params.SIMULATIONS
-    plotResults(qt_per_tag_count, qtsc_per_tag_count)
-
+    qt4_per_tag_count = (qt4_df.drop(['SIMULATION_NUMBER'], axis=1).groupby(['TAG_COUNT']).sum()) / params.SIMULATIONS
+    qtsc4_per_tag_count = (qtsc4_df.drop(['SIMULATION_NUMBER'], axis=1).groupby(['TAG_COUNT']).sum()) / params.SIMULATIONS
+    plotResults(qt_per_tag_count, qtsc_per_tag_count, qt4_per_tag_count, qtsc4_per_tag_count)
 
 if __name__ == '__main__':
     main()
