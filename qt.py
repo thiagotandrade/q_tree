@@ -140,7 +140,6 @@ def QT4(tags):
             empty += 1
     
     end = time.time()
-    print(success)
     return collision, empty, sent_bits, (end-start)*1000, (collision + empty + success)
 
   
@@ -150,6 +149,7 @@ def QTsc4(tags):
     Qsc = ['']
     M = []
     start = time.time()
+    shorcut_counter = 0
     
     # Query Tree Shortcut algorithm
     while Qsc:
@@ -171,22 +171,25 @@ def QTsc4(tags):
         # Collision
         elif len(matched_indices) > 1:
             collision += 1
-            Qsc.extend([current_query + '00', current_query + '01', current_query + '10', current_query + '11'])
+            Qsc.extend([current_query + '11', current_query + '10', current_query + '01', current_query + '00'])
             last_collision = current_query
 
         # Empty            
         else: 
             empty += 1
-            if current_query[:-] == last_collision:
-                # The prefix to be skipped will be on the top of the queue
+            if current_query[:-2] == last_collision:
+                if current_query[-2:] == '00':
+                    shorcut_counter += 1
+                elif current_query[-2:] == '01':
+                    shorcut_counter += 1
+                elif current_query[-2:] == '10':
+                    shorcut_counter += 1  
+            else:
+                shorcut_counter = 0
+            if shorcut_counter == 3:
                 Qsc.pop()
-                # Skip prefix q0
-                if current_query[-1:] == '1':
-                    Qsc.extend([current_query[:-1] + '00', current_query[:-1] + '01'])
-                # Skip prefix q1
-                elif current_query[-1:] == '0':
-                    Qsc.extend([current_query[:-1] + '10', current_query[:-1] + '11'])  
-
+                Qsc.extend([current_query[:-2] + '1100', current_query[:-2] + '1101', current_query[:-2] + '1110', current_query[:-2] + '1111'])
+                shorcut_counter = 0
     end = time.time()
     
     return collision, empty, sent_bits, (end-start)*1000, (collision + empty + success)
@@ -224,24 +227,24 @@ def plotResults(qt, qtsc, qt4, qtsc4):
     p1.xaxis.axis_label = '# Tags'
 
     p1.circle(qt.index, qt['COLLISION_SLOTS'], legend="QT",
-                line_color="red", fill_color='red', size=5)
+                line_color="red", fill_color='red', size=3)
     p1.line(qt.index, qt['COLLISION_SLOTS'], legend="QT",
-                line_color="red", line_width=2, line_dash='dashed', line_dash_offset=10)
+                line_color="red", line_width=1, line_dash='solid', line_dash_offset=10)
 
     p1.circle(qtsc.index, qtsc['COLLISION_SLOTS'], legend="QTsc",
-            line_color="green", fill_color='green', size=5)
+            line_color="green", fill_color='green', size=3)
     p1.line(qtsc.index, qtsc['COLLISION_SLOTS'], legend="QTsc",
-            line_color="green", line_width=2, line_dash='dotted')
+            line_color="green", line_width=1, line_dash='solid')
     
     p1.circle(qt4.index, qt4['COLLISION_SLOTS'], legend="QT-4",
-            line_color="blue", fill_color='blue', size=5)
+            line_color="blue", fill_color='blue', size=3)
     p1.line(qt4.index, qt4['COLLISION_SLOTS'], legend="QT-4",
-            line_color="blue", line_width=2, line_dash='dotdash')
+            line_color="blue", line_width=1, line_dash='solid')
     
     p1.circle(qtsc4.index, qtsc4['COLLISION_SLOTS'], legend="QTsc-4",
-            line_color="black", fill_color='black', size=5)
+            line_color="orange", fill_color='orange', size=3)
     p1.line(qtsc4.index, qtsc4['COLLISION_SLOTS'], legend="QTsc-4",
-            line_color="black", line_width=2, line_dash='dashdot')
+            line_color="orange", line_width=1, line_dash='solid')
 
     p1.legend.location = "top_left"
     p1.legend.click_policy="hide"
@@ -253,24 +256,24 @@ def plotResults(qt, qtsc, qt4, qtsc4):
     p2.xaxis.axis_label = '# Tags'
 
     p2.circle(qt.index, qt['EMPTY_SLOTS'], legend="QT",
-                line_color="red", fill_color='red', size=6, fill_alpha=0.6)
+                line_color="red", fill_color='red', size=5, fill_alpha=0.6)
     p2.line(qt.index, qt['EMPTY_SLOTS'], legend="QT",
-                line_color="red", line_width=2, line_dash='dashed', line_dash_offset=10, alpha=0.6)
+                line_color="red", line_width=1, line_dash='solid', line_dash_offset=10, alpha=0.6)
 
     p2.circle(qtsc.index, qtsc['EMPTY_SLOTS'], legend="QTsc",
-            line_color="green", fill_color='green', size=5, fill_alpha=0.3)
+            line_color="green", fill_color='green', size=3, fill_alpha=0.3)
     p2.line(qtsc.index, qtsc['EMPTY_SLOTS'], legend="QTsc",
-            line_color="green", line_width=2, line_dash='solid', alpha=0.3)
+            line_color="green", line_width=1, line_dash='solid', alpha=0.3)
     
     p2.circle(qt4.index, qt4['EMPTY_SLOTS'], legend="QT-4",
-            line_color="blue", fill_color='blue', size=5)
+            line_color="blue", fill_color='blue', size=3)
     p2.line(qt4.index, qt4['EMPTY_SLOTS'], legend="QT-4",
-            line_color="blue", line_width=2, line_dash='dotdash')
+            line_color="blue", line_width=1, line_dash='solid')
     
     p2.circle(qtsc4.index, qtsc4['EMPTY_SLOTS'], legend="QTsc-4",
-            line_color="black", fill_color='black', size=5)
+            line_color="orange", fill_color='orange', size=3)
     p2.line(qtsc4.index, qtsc4['EMPTY_SLOTS'], legend="QTsc-4",
-            line_color="black", line_width=2, line_dash='dashdot')
+            line_color="orange", line_width=1, line_dash='solid')
     
     p2.legend.location = "top_left"
     p2.legend.click_policy="hide"
@@ -282,34 +285,24 @@ def plotResults(qt, qtsc, qt4, qtsc4):
     p3.xaxis.axis_label = '# Tags'
 
     p3.circle(qt.index, qt['SENT_BITS'], legend="QT",
-                line_color="red", fill_color='red', size=5)
+                line_color="red", fill_color='red', size=3)
     p3.line(qt.index, qt['SENT_BITS'], legend="QT",
-                line_color="red", line_width=2, line_dash='dashed', line_dash_offset=10)
+                line_color="red", line_width=1, line_dash='solid', line_dash_offset=10)
 
     p3.circle(qtsc.index, qtsc['SENT_BITS'], legend="QTsc",
-            line_color="green", fill_color='green', size=5)
+            line_color="green", fill_color='green', size=3)
     p3.line(qtsc.index, qtsc['SENT_BITS'], legend="QTsc",
-            line_color="green", line_width=2, line_dash='dotted')
-    
-    p3.circle(qtsc.index, qt4['SENT_BITS'], legend="QT-4",
-            line_color="blue", fill_color='blue', size=5)
-    p3.line(qtsc.index, qtsc['SENT_BITS'], legend="QT-4",
-            line_color="blue", line_width=2, line_dash='dotdash')
-    
-    p3.circle(qtsc.index, qt4['SENT_BITS'], legend="QTsc-4",
-            line_color="black", fill_color='black', size=5)
-    p3.line(qtsc.index, qtsc['SENT_BITS'], legend="QTsc-4",
-            line_color="black", line_width=2, line_dash='dashdot')
+            line_color="green", line_width=1, line_dash='solid')
     
     p3.circle(qt4.index, qt4['SENT_BITS'], legend="QT-4",
-            line_color="blue", fill_color='blue', size=5)
+            line_color="blue", fill_color='blue', size=3)
     p3.line(qt4.index, qt4['SENT_BITS'], legend="QT-4",
-            line_color="blue", line_width=2, line_dash='dotdash')
+            line_color="blue", line_width=1, line_dash='solid')
     
     p3.circle(qtsc4.index, qtsc4['SENT_BITS'], legend="QTsc-4",
-            line_color="black", fill_color='black', size=5)
+            line_color="orange", fill_color='orange', size=3)
     p3.line(qtsc4.index, qtsc4['SENT_BITS'], legend="QTsc-4",
-            line_color="black", line_width=2, line_dash='dashdot')
+            line_color="orange", line_width=1, line_dash='solid')
  
     p3.legend.location = "top_left"
     p3.legend.click_policy="hide"
@@ -321,24 +314,24 @@ def plotResults(qt, qtsc, qt4, qtsc4):
     p4.xaxis.axis_label = '# Tags'
     
     p4.circle(qt.index, qt['SIMULATION_TIME'], legend="QT",
-                line_color="red", fill_color='red', size=5)
+                line_color="red", fill_color='red', size=3)
     p4.line(qt.index, qt['SIMULATION_TIME'], legend="QT",
-                line_color="red", line_width=2, line_dash='dashed', line_dash_offset=10)
+                line_color="red", line_width=1, line_dash='solid', line_dash_offset=10)
 
     p4.circle(qtsc.index, qtsc['SIMULATION_TIME'], legend="QTsc",
-            line_color="green", fill_color='green', size=5)
+            line_color="green", fill_color='green', size=3)
     p4.line(qtsc.index, qtsc['SIMULATION_TIME'], legend="QTsc",
-            line_color="green", line_width=2, line_dash='dotted')
+            line_color="green", line_width=1, line_dash='solid')
    
     p4.circle(qt4.index, qt4['SIMULATION_TIME'], legend="QT-4",
-            line_color="blue", fill_color='blue', size=5)
+            line_color="blue", fill_color='blue', size=3)
     p4.line(qt4.index, qt4['SIMULATION_TIME'], legend="QT-4",
-            line_color="blue", line_width=2, line_dash='dotdash')
+            line_color="blue", line_width=1, line_dash='solid')
     
     p4.circle(qtsc4.index, qtsc4['SIMULATION_TIME'], legend="QTsc-4",
-            line_color="black", fill_color='black', size=5)
+            line_color="orange", fill_color='orange', size=3)
     p4.line(qtsc4.index, qtsc4['SIMULATION_TIME'], legend="QTsc-4",
-            line_color="black", line_width=2, line_dash='dashdot')
+            line_color="orange", line_width=1, line_dash='solid')
     
     p4.legend.location = "top_left"
     p4.legend.click_policy="hide"
@@ -350,24 +343,24 @@ def plotResults(qt, qtsc, qt4, qtsc4):
     p5.xaxis.axis_label = '# Tags'
 
     p5.circle(qt.index, qt['TOTAL_SLOTS'], legend="QT",
-                line_color="red", fill_color='red', size=5)
+                line_color="red", fill_color='red', size=3)
     p5.line(qt.index, qt['TOTAL_SLOTS'], legend="QT",
-                line_color="red", line_width=2, line_dash='dashed', line_dash_offset=10)
+                line_color="red", line_width=1, line_dash='solid', line_dash_offset=10)
 
     p5.circle(qtsc.index, qtsc['TOTAL_SLOTS'], legend="QTsc",
-            line_color="green", fill_color='green', size=5)
+            line_color="green", fill_color='green', size=3)
     p5.line(qtsc.index, qtsc['TOTAL_SLOTS'], legend="QTsc",
-            line_color="green", line_width=2, line_dash='dotted')
+            line_color="green", line_width=1, line_dash='solid')
 
     p5.circle(qt4.index, qt4['TOTAL_SLOTS'], legend="QT-4",
-            line_color="blue", fill_color='blue', size=5)
+            line_color="blue", fill_color='blue', size=3)
     p5.line(qt4.index, qt4['TOTAL_SLOTS'], legend="QT-4",
-            line_color="blue", line_width=2, line_dash='dotdash')
+            line_color="blue", line_width=1, line_dash='solid')
     
     p5.circle(qtsc4.index, qtsc4['TOTAL_SLOTS'], legend="QTsc-4",
-            line_color="black", fill_color='black', size=5)
+            line_color="orange", fill_color='orange', size=3)
     p5.line(qtsc4.index, qtsc4['TOTAL_SLOTS'], legend="QTsc-4",
-            line_color="black", line_width=2, line_dash='dashdot')
+            line_color="orange", line_width=1, line_dash='solid')
     
     p5.legend.location = "top_left"
     p5.legend.click_policy="hide"
